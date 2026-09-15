@@ -1,4 +1,5 @@
 import { newId } from './id'
+import { localOcrScan } from './localOcr'
 import type { ScannedReceipt } from '../types'
 
 const MOCK_RECEIPTS: Omit<ScannedReceipt, 'date'>[] = [
@@ -39,22 +40,28 @@ function fileToDataUrl(file: File): Promise<string> {
 
 export interface ScanResult {
   receipt: ScannedReceipt
-  /** 'ai' = actually read from the photo. 'demo' = the backend isn't configured, so this is a canned example. */
-  source: 'ai' | 'demo'
+  /**
+   * 'ai' = read by the paid vision LLM (most accurate).
+   * 'local' = read for free in the browser via Tesseract.js (rougher — worth double-checking).
+   * 'demo' = neither worked, so this is a canned example, not your photo.
+   */
+  source: 'ai' | 'local' | 'demo'
 }
 
 /**
- * Scans a receipt photo into structured line items. Always tries the real
- * backend first — POSTs the image to /api/scan-receipt, a Vercel function
- * that calls a vision-capable LLM — independent of whether Supabase/auth is
- * set up, since OCR itself needs no account. If that endpoint isn't
- * reachable or isn't configured yet (no ANTHROPIC_API_KEY), it falls back to
- * a simulated result so the rest of the flow is still testable.
+ * Scans a receipt photo into structured line items, cheapest-first-that-
+ * actually-reads-the-photo:
+ *  1. /api/scan-receipt — a Vercel function calling a vision LLM. Best
+ *     accuracy, costs a fraction of a cent per scan, needs ANTHROPIC_API_KEY.
+ *  2. Free, in-browser OCR (Tesseract.js) — no API key, no account, no
+ *     cost, runs entirely on-device. Rougher heuristic parsing, but it's a
+ *     real read of the real photo.
+ *  3. A canned example receipt, only if both of the above fail, so the rest
+ *     of the flow is still testable.
  */
 export async function scanReceiptImage(file: File): Promise<ScanResult> {
-  const imageDataUrl = await fileToDataUrl(file)
-
   try {
+    const imageDataUrl = await fileToDataUrl(file)
     const res = await fetch('/api/scan-receipt', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -63,7 +70,12 @@ export async function scanReceiptImage(file: File): Promise<ScanResult> {
     if (!res.ok) throw new Error(`Scan failed: ${res.status}`)
     return { receipt: (await res.json()) as ScannedReceipt, source: 'ai' }
   } catch {
-    await new Promise((r) => setTimeout(r, 900))
+    // Falls through to free local OCR below.
+  }
+
+  try {
+    return { receipt: await localOcrScan(file), source: 'local' }
+  } catch {
     const pick = MOCK_RECEIPTS[Math.floor(Math.random() * MOCK_RECEIPTS.length)]
     return { receipt: { ...pick, date: new Date().toISOString().slice(0, 10) }, source: 'demo' }
   }

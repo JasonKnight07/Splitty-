@@ -18,7 +18,7 @@ export default function Scan() {
 
   const [step, setStep] = useState<Step>(manual ? 'review' : 'capture')
   const [receipt, setReceipt] = useState<ScannedReceipt>(manual ? blankScannedReceipt() : blankScannedReceipt())
-  const [scanSource, setScanSource] = useState<'ai' | 'demo' | null>(null)
+  const [scanSource, setScanSource] = useState<'ai' | 'local' | 'demo' | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [destKind, setDestKind] = useState<ReceiptKind>('expense')
   const [category, setCategory] = useState<ReceiptCategory>('personal')
@@ -158,9 +158,14 @@ export default function Scan() {
 
       {step === 'review' && (
         <div className="space-y-4">
+          {scanSource === 'local' && (
+            <div className="rounded-xl bg-sky-50 px-3 py-2 text-xs font-semibold text-sky-800">
+              🔎 Read for free, on-device — this is a real read of your photo, but double-check the items below since it's less accurate than AI scanning.
+            </div>
+          )}
           {scanSource === 'demo' && (
             <div className="rounded-xl bg-amber-50 px-3 py-2 text-xs font-semibold text-amber-800">
-              ⚠ Demo result — real photo scanning isn't set up yet, so this is a sample receipt, not what you photographed. Edit it below, or ask to get real scanning turned on.
+              ⚠ Demo result — couldn't read that photo at all, so this is a sample receipt, not what you photographed. Edit it below, or try a clearer photo.
             </div>
           )}
           <Card>
