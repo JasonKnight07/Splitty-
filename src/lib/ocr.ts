@@ -37,28 +37,36 @@ function fileToDataUrl(file: File): Promise<string> {
   })
 }
 
+export interface ScanResult {
+  receipt: ScannedReceipt
+  /** 'ai' = actually read from the photo. 'demo' = the backend isn't configured, so this is a canned example. */
+  source: 'ai' | 'demo'
+}
+
 /**
- * Scans a receipt photo into structured line items. In demo mode (no backend
- * configured) this simulates the round trip with a small delay and returns a
- * plausible mock parse. Wired to a real backend, it POSTs the image to
- * /api/scan-receipt, a Vercel function that calls a vision-capable LLM.
+ * Scans a receipt photo into structured line items. Always tries the real
+ * backend first — POSTs the image to /api/scan-receipt, a Vercel function
+ * that calls a vision-capable LLM — independent of whether Supabase/auth is
+ * set up, since OCR itself needs no account. If that endpoint isn't
+ * reachable or isn't configured yet (no ANTHROPIC_API_KEY), it falls back to
+ * a simulated result so the rest of the flow is still testable.
  */
-export async function scanReceiptImage(file: File, useBackend: boolean): Promise<ScannedReceipt> {
+export async function scanReceiptImage(file: File): Promise<ScanResult> {
   const imageDataUrl = await fileToDataUrl(file)
 
-  if (useBackend) {
+  try {
     const res = await fetch('/api/scan-receipt', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ imageDataUrl }),
     })
     if (!res.ok) throw new Error(`Scan failed: ${res.status}`)
-    return (await res.json()) as ScannedReceipt
+    return { receipt: (await res.json()) as ScannedReceipt, source: 'ai' }
+  } catch {
+    await new Promise((r) => setTimeout(r, 900))
+    const pick = MOCK_RECEIPTS[Math.floor(Math.random() * MOCK_RECEIPTS.length)]
+    return { receipt: { ...pick, date: new Date().toISOString().slice(0, 10) }, source: 'demo' }
   }
-
-  await new Promise((r) => setTimeout(r, 1400))
-  const pick = MOCK_RECEIPTS[Math.floor(Math.random() * MOCK_RECEIPTS.length)]
-  return { ...pick, date: new Date().toISOString().slice(0, 10) }
 }
 
 export function blankScannedReceipt(): ScannedReceipt {

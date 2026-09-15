@@ -18,6 +18,7 @@ export default function Scan() {
 
   const [step, setStep] = useState<Step>(manual ? 'review' : 'capture')
   const [receipt, setReceipt] = useState<ScannedReceipt>(manual ? blankScannedReceipt() : blankScannedReceipt())
+  const [scanSource, setScanSource] = useState<'ai' | 'demo' | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [destKind, setDestKind] = useState<ReceiptKind>('expense')
   const [category, setCategory] = useState<ReceiptCategory>('personal')
@@ -30,9 +31,9 @@ export default function Scan() {
     setStep('processing')
     setError(null)
     try {
-      const useBackend = client?.mode === 'supabase'
-      const scanned = await scanReceiptImage(file, useBackend)
+      const { receipt: scanned, source } = await scanReceiptImage(file)
       setReceipt(scanned)
+      setScanSource(source)
       setStep('review')
     } catch (e) {
       setError('Could not read that receipt. Try again or enter it manually.')
@@ -157,6 +158,11 @@ export default function Scan() {
 
       {step === 'review' && (
         <div className="space-y-4">
+          {scanSource === 'demo' && (
+            <div className="rounded-xl bg-amber-50 px-3 py-2 text-xs font-semibold text-amber-800">
+              ⚠ Demo result — real photo scanning isn't set up yet, so this is a sample receipt, not what you photographed. Edit it below, or ask to get real scanning turned on.
+            </div>
+          )}
           <Card>
             <label className="text-xs font-semibold uppercase text-ink-400">Merchant</label>
             <input
