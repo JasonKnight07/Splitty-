@@ -22,7 +22,8 @@ export default function Scan() {
   const [category, setCategory] = useState<ReceiptCategory>('personal')
   const [productName, setProductName] = useState('')
   const [warrantyMonths, setWarrantyMonths] = useState(24)
-  const fileInputRef = useRef<HTMLInputElement>(null)
+  const cameraInputRef = useRef<HTMLInputElement>(null)
+  const uploadInputRef = useRef<HTMLInputElement>(null)
 
   async function handleFile(file: File) {
     setStep('processing')
@@ -110,20 +111,34 @@ export default function Scan() {
       {step === 'capture' && (
         <div className="space-y-4">
           <input
-            ref={fileInputRef}
+            ref={cameraInputRef}
             type="file"
             accept="image/*"
             capture="environment"
             className="hidden"
             onChange={(e) => e.target.files?.[0] && handleFile(e.target.files[0])}
           />
+          <input
+            ref={uploadInputRef}
+            type="file"
+            accept="image/*"
+            className="hidden"
+            onChange={(e) => e.target.files?.[0] && handleFile(e.target.files[0])}
+          />
           <button
-            onClick={() => fileInputRef.current?.click()}
-            className="tap-highlight-none flex w-full flex-col items-center justify-center rounded-xl2 border-2 border-dashed border-brand-300 bg-brand-50 py-16 text-brand-700 transition active:scale-[0.98]"
+            onClick={() => cameraInputRef.current?.click()}
+            className="tap-highlight-none flex w-full flex-col items-center justify-center rounded-xl2 border-2 border-dashed border-brand-300 bg-brand-50 py-14 text-brand-700 transition active:scale-[0.98]"
           >
             <span className="text-5xl">📷</span>
-            <span className="mt-3 font-bold">Tap to scan a receipt</span>
-            <span className="text-xs text-brand-600">Camera or photo library</span>
+            <span className="mt-3 font-bold">Take a photo</span>
+            <span className="text-xs text-brand-600">Use your camera</span>
+          </button>
+          <button
+            onClick={() => uploadInputRef.current?.click()}
+            className="tap-highlight-none flex w-full items-center justify-center gap-2 rounded-xl2 border border-ink-200 bg-white py-4 font-bold text-ink-700 transition active:scale-[0.98]"
+          >
+            <span className="text-xl">🖼️</span>
+            Upload a photo
           </button>
           {error && <p className="text-center text-sm text-red-600">{error}</p>}
           <Button variant="secondary" className="w-full" onClick={() => setStep('review')}>
