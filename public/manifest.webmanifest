@@ -1,0 +1,10 @@
+{
+  "name": "Splitty",
+  "short_name": "Splitty",
+  "description": "Scan the slip, split the bill, keep the receipts.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#f6f7f8",
+  "theme_color": "#188451",
+  "icons": []
+}
