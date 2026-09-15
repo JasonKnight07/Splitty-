@@ -35,10 +35,11 @@ export function Card({
 }) {
   const Comp = onClick ? 'button' : 'div'
   const hasCustomBg = /\bbg-/.test(className)
+  const hasCustomRadius = /\brounded-/.test(className)
   return (
     <Comp
       onClick={onClick}
-      className={`tap-highlight-none w-full rounded-xl2 border border-ink-100 ${hasCustomBg ? '' : 'bg-white'} p-4 text-left shadow-card ${
+      className={`tap-highlight-none w-full ${hasCustomRadius ? '' : 'rounded-xl2'} border border-ink-100 ${hasCustomBg ? '' : 'bg-white'} p-4 text-left shadow-card ${
         onClick ? 'transition active:scale-[0.98] active:shadow-none' : ''
       } ${className}`}
     >

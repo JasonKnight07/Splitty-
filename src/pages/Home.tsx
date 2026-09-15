@@ -62,11 +62,9 @@ export default function Home() {
         subtitle="What are we splitting today?"
       />
 
-      <Card onClick={() => navigate('/scan')} className="mb-2 flex items-center justify-between">
-        <span className="flex items-center gap-2 text-sm font-bold text-ink-900">
-          <CameraIcon className="h-5 w-5 text-brand-600" /> Scan a new receipt
-        </span>
-        <span className="text-lg font-bold text-brand-600">&rsaquo;</span>
+      <Card onClick={() => navigate('/scan')} className="mb-2 flex items-center justify-center gap-2 rounded-full py-3.5">
+        <CameraIcon className="h-5 w-5 text-brand-600" />
+        <span className="text-sm font-bold text-ink-900">Scan</span>
       </Card>
       <button
         onClick={() => navigate('/scan?mode=manual')}
