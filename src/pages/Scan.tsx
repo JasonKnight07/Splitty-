@@ -1,6 +1,7 @@
 import { useRef, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { Button, Card, Screen, ScreenHeader } from '../components/ui'
+import { CameraIcon, ImageIcon } from '../components/icons'
 import { useApp } from '../context/AppContext'
 import { newId } from '../lib/id'
 import { blankScannedReceipt, scanReceiptImage } from '../lib/ocr'
@@ -129,7 +130,7 @@ export default function Scan() {
             onClick={() => cameraInputRef.current?.click()}
             className="tap-highlight-none flex w-full flex-col items-center justify-center rounded-xl2 border-2 border-dashed border-brand-300 bg-brand-50 py-14 text-brand-700 transition active:scale-[0.98]"
           >
-            <span className="text-5xl">📷</span>
+            <CameraIcon className="h-11 w-11" strokeWidth={1.5} />
             <span className="mt-3 font-bold">Take a photo</span>
             <span className="text-xs text-brand-600">Use your camera</span>
           </button>
@@ -137,7 +138,7 @@ export default function Scan() {
             onClick={() => uploadInputRef.current?.click()}
             className="tap-highlight-none flex w-full items-center justify-center gap-2 rounded-xl2 border border-ink-200 bg-white py-4 font-bold text-ink-700 transition active:scale-[0.98]"
           >
-            <span className="text-xl">🖼️</span>
+            <ImageIcon className="h-5 w-5" />
             Upload a photo
           </button>
           {error && <p className="text-center text-sm text-red-600">{error}</p>}

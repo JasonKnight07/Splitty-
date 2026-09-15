@@ -1,8 +1,9 @@
 import { NavLink } from 'react-router-dom'
+import { CameraIcon } from './icons'
 
 const TABS = [
   { to: '/', label: 'Home', icon: '🏠', end: true },
-  { to: '/scan', label: 'Scan', icon: '📷', end: false },
+  { to: '/scan', label: 'Scan', icon: null, end: false },
   { to: '/receipts', label: 'Receipts', icon: '🗂️', end: false },
   { to: '/settings', label: 'Settings', icon: '⚙️', end: false },
 ]
@@ -22,7 +23,11 @@ export function BottomNav() {
               }`
             }
           >
-            <span className="text-xl leading-none">{tab.icon}</span>
+            {tab.icon ? (
+              <span className="text-xl leading-none">{tab.icon}</span>
+            ) : (
+              <CameraIcon className="h-5 w-5" strokeWidth={2.2} />
+            )}
             {tab.label}
           </NavLink>
         ))}

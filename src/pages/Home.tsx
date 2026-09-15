@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Avatar, Badge, Button, Card, EmptyState, Screen, ScreenHeader } from '../components/ui'
+import { CameraIcon } from '../components/icons'
 import { useApp } from '../context/AppContext'
 import { computeGrandTotal, computePersonTotals } from '../lib/calc'
 import { formatCurrency } from '../lib/currency'
@@ -63,7 +64,7 @@ export default function Home() {
 
       <Card onClick={() => navigate('/scan')} className="mb-2 flex items-center justify-between">
         <span className="flex items-center gap-2 text-sm font-bold text-ink-900">
-          <span className="text-lg">📷</span> Scan a new receipt
+          <CameraIcon className="h-5 w-5 text-brand-600" /> Scan a new receipt
         </span>
         <span className="text-lg font-bold text-brand-600">&rsaquo;</span>
       </Card>
