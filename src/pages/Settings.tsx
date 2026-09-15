@@ -5,22 +5,22 @@ import { getCurrency, setCurrency } from '../lib/currency'
 import type { SubscriptionPlan } from '../types'
 
 const PLANS: { id: SubscriptionPlan; name: string; price: string; perks: string[] }[] = [
-  { id: 'free', name: 'Free', price: '$0', perks: ['Split bills with friends', '3 receipt scans / month', 'Basic tip presets'] },
+  { id: 'free', name: 'Free', price: 'R0', perks: ['Split bills with friends', '3 receipt scans / month', 'Basic tip presets'] },
   {
     id: 'plus',
     name: 'Plus',
-    price: '$4.99/mo',
+    price: 'R95/mo',
     perks: ['Unlimited receipt scans', 'Full tax expense vault + CSV export', 'Warranty tracking & reminders'],
   },
   {
     id: 'pro',
     name: 'Pro',
-    price: '$9.99/mo',
+    price: 'R189/mo',
     perks: ['Everything in Plus', 'Multiple businesses / categories', 'Priority support'],
   },
 ]
 
-const CURRENCIES = ['USD', 'GBP', 'EUR', 'ZAR', 'AUD', 'CAD']
+const CURRENCIES = ['ZAR', 'USD', 'GBP', 'EUR', 'AUD', 'CAD']
 
 export default function Settings() {
   const { user, subscription, signOut, client, refreshSubscription } = useApp()

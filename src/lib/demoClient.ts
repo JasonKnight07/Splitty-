@@ -31,11 +31,11 @@ function seedIfEmpty() {
   const jordan = { id: 'p-jordan', name: 'Jordan' }
 
   const items = [
-    { id: 'i-1', name: 'Margherita Pizza', price: 14.5, quantity: 1 },
-    { id: 'i-2', name: 'Caesar Salad', price: 9.0, quantity: 1 },
-    { id: 'i-3', name: 'Craft Beer x2', price: 12.0, quantity: 2 },
-    { id: 'i-4', name: 'Tiramisu', price: 7.5, quantity: 1 },
-    { id: 'i-5', name: 'Sparkling Water', price: 4.0, quantity: 1 },
+    { id: 'i-1', name: 'Margherita Pizza', price: 145, quantity: 1 },
+    { id: 'i-2', name: 'Caesar Salad', price: 90, quantity: 1 },
+    { id: 'i-3', name: 'Craft Beer x2', price: 120, quantity: 2 },
+    { id: 'i-4', name: 'Tiramisu', price: 75, quantity: 1 },
+    { id: 'i-5', name: 'Sparkling Water', price: 40, quantity: 1 },
   ]
 
   const demoBill: Bill = {
@@ -45,7 +45,7 @@ function seedIfEmpty() {
     date: new Date(Date.now() - 86400000 * 2).toISOString().slice(0, 10),
     items,
     subtotal: items.reduce((s, i) => s + i.price, 0),
-    tax: 3.68,
+    tax: 70.5,
     people: [alex, sam, jordan],
     couples: [{ id: 'c-sam-jordan', name: 'Sam & Jordan', personIds: [sam.id, jordan.id] }],
     claims: [
@@ -63,29 +63,29 @@ function seedIfEmpty() {
   const receipts: SavedReceipt[] = [
     {
       id: 'r-demo-1',
-      merchant: 'Staples',
+      merchant: 'Waltons',
       date: new Date(Date.now() - 86400000 * 10).toISOString().slice(0, 10),
-      total: 84.32,
+      total: 843.2,
       kind: 'expense',
       category: 'business',
       notes: 'Printer paper + toner',
       items: [
-        { id: 'ri-1', name: 'A4 Paper (5 reams)', price: 34.5, quantity: 1 },
-        { id: 'ri-2', name: 'Toner Cartridge', price: 49.82, quantity: 1 },
+        { id: 'ri-1', name: 'A4 Paper (5 reams)', price: 345, quantity: 1 },
+        { id: 'ri-2', name: 'Toner Cartridge', price: 498.2, quantity: 1 },
       ],
       createdAt: new Date(Date.now() - 86400000 * 10).toISOString(),
     },
     {
       id: 'r-demo-2',
-      merchant: 'Appliance World',
+      merchant: 'Game',
       date: new Date(Date.now() - 86400000 * 60).toISOString().slice(0, 10),
-      total: 649.0,
+      total: 6490.0,
       kind: 'warranty',
       category: 'personal',
       productName: 'LG 400L Fridge',
       warrantyMonths: 24,
       warrantyExpires: new Date(Date.now() + 86400000 * 305).toISOString().slice(0, 10),
-      items: [{ id: 'ri-3', name: 'LG 400L Fridge', price: 649.0, quantity: 1 }],
+      items: [{ id: 'ri-3', name: 'LG 400L Fridge', price: 6490.0, quantity: 1 }],
       createdAt: new Date(Date.now() - 86400000 * 60).toISOString(),
     },
   ]

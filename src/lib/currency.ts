@@ -1,8 +1,11 @@
 const CURRENCY_KEY = 'splitty.currency'
 
+/** Change this to switch Splitty's default currency for everyone who hasn't picked their own in Settings. */
+export const DEFAULT_CURRENCY = 'ZAR'
+
 export function getCurrency(): string {
-  if (typeof window === 'undefined') return 'USD'
-  return window.localStorage.getItem(CURRENCY_KEY) || 'USD'
+  if (typeof window === 'undefined') return DEFAULT_CURRENCY
+  return window.localStorage.getItem(CURRENCY_KEY) || DEFAULT_CURRENCY
 }
 
 export function setCurrency(code: string) {
