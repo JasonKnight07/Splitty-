@@ -1,10 +1,12 @@
 import { useEffect, useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { useNavigate } from 'react-router-dom'
 import { Avatar, Badge, Button, Card, EmptyState, Screen, ScreenHeader } from '../components/ui'
 import { useApp } from '../context/AppContext'
 import { computeGrandTotal, computePersonTotals } from '../lib/calc'
 import { formatCurrency } from '../lib/currency'
 import type { Bill, SavedReceipt } from '../types'
+
+type Tab = 'bills' | 'receipts'
 
 export default function Home() {
   const { client, user, signIn } = useApp()
@@ -12,6 +14,7 @@ export default function Home() {
   const [bills, setBills] = useState<Bill[]>([])
   const [receipts, setReceipts] = useState<SavedReceipt[]>([])
   const [name, setName] = useState('')
+  const [tab, setTab] = useState<Tab>('bills')
 
   useEffect(() => {
     if (!client) return
@@ -58,86 +61,116 @@ export default function Home() {
         subtitle="What are we splitting today?"
       />
 
-      <div className="mb-6 grid grid-cols-2 gap-3">
-        <Card onClick={() => navigate('/scan')} className="bg-brand-600 text-white">
-          <div className="text-2xl">📷</div>
-          <p className="mt-2 font-bold">Scan a slip</p>
-          <p className="text-xs text-brand-100">Capture items instantly</p>
-        </Card>
-        <Card onClick={() => navigate('/scan?mode=manual')}>
-          <div className="text-2xl">✏️</div>
-          <p className="mt-2 font-bold text-ink-900">Enter manually</p>
-          <p className="text-xs text-ink-500">Type in a total to split</p>
-        </Card>
+      <Card onClick={() => navigate('/scan')} className="mb-2 flex items-center justify-between">
+        <span className="flex items-center gap-2 text-sm font-bold text-ink-900">
+          <span className="text-lg">📷</span> Scan a new receipt
+        </span>
+        <span className="text-lg font-bold text-brand-600">&rsaquo;</span>
+      </Card>
+      <button
+        onClick={() => navigate('/scan?mode=manual')}
+        className="mb-6 w-full text-center text-xs font-semibold text-ink-400 underline"
+      >
+        Or enter items manually
+      </button>
+
+      <div className="mb-4 flex rounded-full bg-ink-100 p-1">
+        {(
+          [
+            ['bills', 'Bills'],
+            ['receipts', 'Receipts'],
+          ] as [Tab, string][]
+        ).map(([t, label]) => (
+          <button
+            key={t}
+            onClick={() => setTab(t)}
+            className={`flex-1 rounded-full py-2 text-sm font-bold transition ${
+              tab === t ? 'bg-white text-brand-700 shadow-card' : 'text-ink-500'
+            }`}
+          >
+            {label}
+          </button>
+        ))}
       </div>
 
-      <div className="mb-3 flex items-center justify-between">
-        <h2 className="text-lg font-bold text-ink-900">Recent bills</h2>
-        {bills.length > 0 && (
-          <Link to="/scan" className="text-sm font-semibold text-brand-700">
-            + New
-          </Link>
-        )}
-      </div>
-
-      {openBills.length === 0 ? (
-        <EmptyState icon="🍽️" title="No bills yet" subtitle="Scan a receipt to start splitting with friends." />
-      ) : (
-        <div className="space-y-3">
-          {openBills.slice(0, 5).map((bill) => {
-            const totals = computePersonTotals(bill)
-            const you = bill.people.find((p) => p.name === 'You') ?? bill.people[0]
-            const yourTotal = you ? totals.get(you.id)?.total ?? 0 : 0
-            return (
-              <Card key={bill.id} onClick={() => navigate(`/bill/${bill.id}`)}>
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="font-bold text-ink-900">{bill.name}</p>
-                    <p className="text-xs text-ink-500">
-                      {new Date(bill.date).toLocaleDateString(undefined, { day: 'numeric', month: 'short' })} ·{' '}
-                      {bill.people.length} {bill.people.length === 1 ? 'person' : 'people'}
-                    </p>
-                  </div>
-                  <div className="text-right">
-                    <p className="font-extrabold text-ink-900">{formatCurrency(computeGrandTotal(bill))}</p>
-                    <p className="text-xs text-brand-700">you owe {formatCurrency(yourTotal)}</p>
-                  </div>
-                </div>
-                <div className="mt-3 flex -space-x-2">
-                  {bill.people.map((p) => (
-                    <Avatar key={p.id} name={p.name} size="sm" />
-                  ))}
-                </div>
-              </Card>
-            )
-          })}
-        </div>
-      )}
-
-      {receipts.length > 0 && (
+      {tab === 'bills' ? (
         <>
-          <div className="mb-3 mt-8 flex items-center justify-between">
+          <div className="mb-3 flex items-center justify-between">
+            <h2 className="text-lg font-bold text-ink-900">Your bills</h2>
+            {bills.length > 0 && (
+              <button onClick={() => navigate('/scan')} className="text-sm font-semibold text-brand-700">
+                + New
+              </button>
+            )}
+          </div>
+
+          {openBills.length === 0 ? (
+            <EmptyState icon="🍽️" title="No bills yet" subtitle="Scan a receipt to start splitting with friends." />
+          ) : (
+            <div className="space-y-3">
+              {openBills.map((bill) => {
+                const totals = computePersonTotals(bill)
+                const you = bill.people.find((p) => p.name === 'You') ?? bill.people[0]
+                const yourTotal = you ? totals.get(you.id)?.total ?? 0 : 0
+                return (
+                  <Card key={bill.id} onClick={() => navigate(`/bill/${bill.id}`)}>
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="font-bold text-ink-900">{bill.name}</p>
+                        <p className="text-xs text-ink-500">
+                          {new Date(bill.date).toLocaleDateString(undefined, { day: 'numeric', month: 'short' })} ·{' '}
+                          {bill.people.length} {bill.people.length === 1 ? 'person' : 'people'}
+                        </p>
+                      </div>
+                      <div className="text-right">
+                        <p className="font-extrabold text-ink-900">{formatCurrency(computeGrandTotal(bill))}</p>
+                        <p className="text-xs text-brand-700">you owe {formatCurrency(yourTotal)}</p>
+                      </div>
+                    </div>
+                    <div className="mt-3 flex -space-x-2">
+                      {bill.people.map((p) => (
+                        <Avatar key={p.id} name={p.name} size="sm" />
+                      ))}
+                    </div>
+                  </Card>
+                )
+              })}
+            </div>
+          )}
+        </>
+      ) : (
+        <>
+          <div className="mb-3 flex items-center justify-between">
             <h2 className="text-lg font-bold text-ink-900">Saved receipts</h2>
-            <Link to="/receipts" className="text-sm font-semibold text-brand-700">
-              View all
-            </Link>
+            {receipts.length > 0 && (
+              <button onClick={() => navigate('/receipts')} className="text-sm font-semibold text-brand-700">
+                View all
+              </button>
+            )}
           </div>
-          <div className="space-y-3">
-            {receipts.slice(0, 3).map((r) => (
-              <Card key={r.id} onClick={() => navigate(`/receipts/${r.id}`)}>
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="font-bold text-ink-900">{r.merchant}</p>
-                    <p className="text-xs text-ink-500">{new Date(r.date).toLocaleDateString()}</p>
+
+          {receipts.length === 0 ? (
+            <EmptyState icon="🧾" title="No receipts yet" subtitle="Scan a receipt and save it for tax or warranty tracking." />
+          ) : (
+            <div className="space-y-3">
+              {receipts.slice(0, 5).map((r) => (
+                <Card key={r.id} onClick={() => navigate(`/receipts/${r.id}`)}>
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="font-bold text-ink-900">{r.kind === 'warranty' ? r.productName || r.merchant : r.merchant}</p>
+                      <p className="text-xs text-ink-500">{new Date(r.date).toLocaleDateString()}</p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Badge tone={r.kind === 'warranty' ? 'amber' : r.category === 'business' ? 'brand' : 'ink'}>
+                        {r.kind === 'warranty' ? 'warranty' : r.category}
+                      </Badge>
+                      <p className="font-bold text-ink-900">{formatCurrency(r.total)}</p>
+                    </div>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <Badge tone={r.category === 'business' ? 'brand' : 'ink'}>{r.category}</Badge>
-                    <p className="font-bold text-ink-900">{formatCurrency(r.total)}</p>
-                  </div>
-                </div>
-              </Card>
-            ))}
-          </div>
+                </Card>
+              ))}
+            </div>
+          )}
         </>
       )}
     </Screen>
