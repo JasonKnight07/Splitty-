@@ -7,7 +7,7 @@ import { computeGrandTotal, computePersonTotals } from '../lib/calc'
 import { formatCurrency } from '../lib/currency'
 import type { Bill, SavedReceipt } from '../types'
 
-type Tab = 'bills' | 'receipts'
+type Tab = 'bills' | 'receipts' | 'appliances'
 
 export default function Home() {
   const { client, user, signIn } = useApp()
@@ -54,6 +54,10 @@ export default function Home() {
   }
 
   const openBills = bills.filter((b) => b.people.length > 0)
+  const expenseReceipts = receipts.filter((r) => r.kind === 'expense')
+  const applianceReceipts = receipts
+    .filter((r) => r.kind === 'warranty')
+    .sort((a, b) => (a.warrantyExpires ?? '').localeCompare(b.warrantyExpires ?? ''))
 
   return (
     <Screen>
@@ -78,12 +82,13 @@ export default function Home() {
           [
             ['bills', 'Bills'],
             ['receipts', 'Receipts'],
+            ['appliances', 'Appliances'],
           ] as [Tab, string][]
         ).map(([t, label]) => (
           <button
             key={t}
             onClick={() => setTab(t)}
-            className={`flex-1 rounded-full py-2 text-sm font-bold transition ${
+            className={`flex-1 rounded-full py-2 text-xs font-bold transition sm:text-sm ${
               tab === t ? 'bg-white text-brand-700 shadow-card' : 'text-ink-500'
             }`}
           >
@@ -137,37 +142,75 @@ export default function Home() {
             </div>
           )}
         </>
-      ) : (
+      ) : tab === 'receipts' ? (
         <>
           <div className="mb-3 flex items-center justify-between">
             <h2 className="text-lg font-bold text-ink-900">Saved receipts</h2>
-            {receipts.length > 0 && (
+            {expenseReceipts.length > 0 && (
               <button onClick={() => navigate('/receipts')} className="text-sm font-semibold text-brand-700">
                 View all
               </button>
             )}
           </div>
 
-          {receipts.length === 0 ? (
-            <EmptyState icon="🧾" title="No receipts yet" subtitle="Scan a receipt and save it for tax or warranty tracking." />
+          {expenseReceipts.length === 0 ? (
+            <EmptyState icon="🧾" title="No receipts yet" subtitle="Scan a receipt and save it as a tax expense." />
           ) : (
             <div className="space-y-3">
-              {receipts.slice(0, 5).map((r) => (
+              {expenseReceipts.slice(0, 5).map((r) => (
                 <Card key={r.id} onClick={() => navigate(`/receipts/${r.id}`)}>
                   <div className="flex items-center justify-between">
                     <div>
-                      <p className="font-bold text-ink-900">{r.kind === 'warranty' ? r.productName || r.merchant : r.merchant}</p>
+                      <p className="font-bold text-ink-900">{r.merchant}</p>
                       <p className="text-xs text-ink-500">{new Date(r.date).toLocaleDateString()}</p>
                     </div>
                     <div className="flex items-center gap-2">
-                      <Badge tone={r.kind === 'warranty' ? 'amber' : r.category === 'business' ? 'brand' : 'ink'}>
-                        {r.kind === 'warranty' ? 'warranty' : r.category}
-                      </Badge>
+                      <Badge tone={r.category === 'business' ? 'brand' : 'ink'}>{r.category}</Badge>
                       <p className="font-bold text-ink-900">{formatCurrency(r.total)}</p>
                     </div>
                   </div>
                 </Card>
               ))}
+            </div>
+          )}
+        </>
+      ) : (
+        <>
+          <div className="mb-3 flex items-center justify-between">
+            <h2 className="text-lg font-bold text-ink-900">Appliances &amp; purchases</h2>
+            {applianceReceipts.length > 0 && (
+              <button onClick={() => navigate('/receipts')} className="text-sm font-semibold text-brand-700">
+                View all
+              </button>
+            )}
+          </div>
+
+          {applianceReceipts.length === 0 ? (
+            <EmptyState icon="🛠️" title="No appliances tracked" subtitle="Save a purchase to get warranty expiry reminders." />
+          ) : (
+            <div className="space-y-3">
+              {applianceReceipts.slice(0, 5).map((r) => {
+                const daysLeft = r.warrantyExpires
+                  ? Math.ceil((new Date(r.warrantyExpires).getTime() - Date.now()) / 86400000)
+                  : null
+                const expired = daysLeft !== null && daysLeft < 0
+                const soon = daysLeft !== null && daysLeft >= 0 && daysLeft <= 30
+                return (
+                  <Card key={r.id} onClick={() => navigate(`/receipts/${r.id}`)}>
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="font-bold text-ink-900">{r.productName || r.merchant}</p>
+                        <p className="text-xs text-ink-500">
+                          Bought {new Date(r.date).toLocaleDateString()} &middot; {formatCurrency(r.total)}
+                        </p>
+                      </div>
+                      <Badge tone={expired ? 'red' : soon ? 'amber' : 'brand'}>
+                        {expired ? 'Expired' : daysLeft !== null ? `${daysLeft}d left` : '—'}
+                      </Badge>
+                    </div>
+                  </Card>
+                )
+              })}
             </div>
           )}
         </>
