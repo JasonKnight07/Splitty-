@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { Avatar, Badge, Button, Card, Screen, ScreenHeader } from '../components/ui'
 import { useApp } from '../context/AppContext'
 import { getCurrency, setCurrency } from '../lib/currency'
@@ -24,6 +25,7 @@ const CURRENCIES = ['ZAR', 'USD', 'GBP', 'EUR', 'AUD', 'CAD']
 
 export default function Settings() {
   const { user, subscription, signOut, client, refreshSubscription } = useApp()
+  const navigate = useNavigate()
   const [currency, setCurrencyState] = useState(getCurrency())
   const [busyPlan, setBusyPlan] = useState<SubscriptionPlan | null>(null)
 
@@ -61,6 +63,17 @@ export default function Settings() {
           </div>
         </Card>
       )}
+
+      <Card onClick={() => navigate('/contacts')} className="mb-6 flex items-center justify-between">
+        <span className="flex items-center gap-3">
+          <span className="text-xl">👥</span>
+          <span>
+            <span className="block text-sm font-bold text-ink-900">Contacts &amp; groups</span>
+            <span className="block text-xs text-ink-500">Save people, start a group bill in one tap</span>
+          </span>
+        </span>
+        <span className="text-lg font-bold text-brand-600">&rsaquo;</span>
+      </Card>
 
       <h2 className="mb-2 text-lg font-bold text-ink-900">Subscription</h2>
       <div className="mb-4 space-y-2">

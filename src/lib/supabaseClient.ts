@@ -1,5 +1,5 @@
 import { createClient, type SupabaseClient } from '@supabase/supabase-js'
-import type { AppUser, Bill, SavedReceipt, Subscription } from '../types'
+import type { AppUser, Bill, Contact, FriendGroup, SavedReceipt, Subscription } from '../types'
 import type { DataClient } from './dataClient'
 
 let client: SupabaseClient | null = null
@@ -100,6 +100,40 @@ export class SupabaseDataClient implements DataClient {
 
   async setSubscription(sub: Subscription): Promise<void> {
     const { error } = await this.sb.from('subscriptions').upsert({ id: 'me', data: sub })
+    if (error) throw error
+  }
+
+  async listContacts(): Promise<Contact[]> {
+    const { data, error } = await this.sb.from('contacts').select('data').order('created_at', { ascending: true })
+    if (error) throw error
+    return (data ?? []).map((row) => row.data as Contact)
+  }
+
+  async saveContact(contact: Contact): Promise<Contact> {
+    const { error } = await this.sb.from('contacts').upsert({ id: contact.id, data: contact })
+    if (error) throw error
+    return contact
+  }
+
+  async deleteContact(id: string): Promise<void> {
+    const { error } = await this.sb.from('contacts').delete().eq('id', id)
+    if (error) throw error
+  }
+
+  async listGroups(): Promise<FriendGroup[]> {
+    const { data, error } = await this.sb.from('friend_groups').select('data').order('created_at', { ascending: true })
+    if (error) throw error
+    return (data ?? []).map((row) => row.data as FriendGroup)
+  }
+
+  async saveGroup(group: FriendGroup): Promise<FriendGroup> {
+    const { error } = await this.sb.from('friend_groups').upsert({ id: group.id, data: group })
+    if (error) throw error
+    return group
+  }
+
+  async deleteGroup(id: string): Promise<void> {
+    const { error } = await this.sb.from('friend_groups').delete().eq('id', id)
     if (error) throw error
   }
 }

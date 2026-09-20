@@ -1,4 +1,4 @@
-import type { AppUser, Bill, SavedReceipt, Subscription } from '../types'
+import type { AppUser, Bill, Contact, FriendGroup, SavedReceipt, Subscription } from '../types'
 import type { DataClient } from './dataClient'
 import { newId } from './id'
 
@@ -7,6 +7,8 @@ const KEYS = {
   bills: 'splitty.demo.bills',
   receipts: 'splitty.demo.receipts',
   subscription: 'splitty.demo.subscription',
+  contacts: 'splitty.demo.contacts',
+  groups: 'splitty.demo.groups',
   seeded: 'splitty.demo.seeded',
 }
 
@@ -91,9 +93,19 @@ function seedIfEmpty() {
     },
   ]
 
+  const contacts: Contact[] = [
+    { id: 'c-sam', name: 'Sam' },
+    { id: 'c-jordan', name: 'Jordan' },
+  ]
+  const groups: FriendGroup[] = [
+    { id: 'g-friday-crew', name: 'Friday crew', contactIds: ['c-sam', 'c-jordan'] },
+  ]
+
   write(KEYS.bills, [demoBill])
   write(KEYS.receipts, receipts)
   write(KEYS.subscription, { plan: 'free', status: 'active' } satisfies Subscription)
+  write(KEYS.contacts, contacts)
+  write(KEYS.groups, groups)
   write(KEYS.seeded, true)
 }
 
@@ -169,5 +181,52 @@ export class DemoDataClient implements DataClient {
 
   async setSubscription(sub: Subscription): Promise<void> {
     write(KEYS.subscription, sub)
+  }
+
+  async listContacts(): Promise<Contact[]> {
+    return read<Contact[]>(KEYS.contacts, []).sort((a, b) => a.name.localeCompare(b.name))
+  }
+
+  async saveContact(contact: Contact): Promise<Contact> {
+    const contacts = read<Contact[]>(KEYS.contacts, [])
+    const idx = contacts.findIndex((c) => c.id === contact.id)
+    if (idx >= 0) contacts[idx] = contact
+    else contacts.push(contact)
+    write(KEYS.contacts, contacts)
+    return contact
+  }
+
+  async deleteContact(id: string): Promise<void> {
+    write(
+      KEYS.contacts,
+      read<Contact[]>(KEYS.contacts, []).filter((c) => c.id !== id),
+    )
+    write(
+      KEYS.groups,
+      read<FriendGroup[]>(KEYS.groups, []).map((g) => ({
+        ...g,
+        contactIds: g.contactIds.filter((cid) => cid !== id),
+      })),
+    )
+  }
+
+  async listGroups(): Promise<FriendGroup[]> {
+    return read<FriendGroup[]>(KEYS.groups, []).sort((a, b) => a.name.localeCompare(b.name))
+  }
+
+  async saveGroup(group: FriendGroup): Promise<FriendGroup> {
+    const groups = read<FriendGroup[]>(KEYS.groups, [])
+    const idx = groups.findIndex((g) => g.id === group.id)
+    if (idx >= 0) groups[idx] = group
+    else groups.push(group)
+    write(KEYS.groups, groups)
+    return group
+  }
+
+  async deleteGroup(id: string): Promise<void> {
+    write(
+      KEYS.groups,
+      read<FriendGroup[]>(KEYS.groups, []).filter((g) => g.id !== id),
+    )
   }
 }

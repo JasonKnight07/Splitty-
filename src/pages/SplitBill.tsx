@@ -17,7 +17,7 @@ import {
 } from '../lib/calc'
 import { formatCurrency } from '../lib/currency'
 import { newId } from '../lib/id'
-import type { Bill, Person, SplitMode, TipMode } from '../types'
+import type { Bill, Contact, FriendGroup, Person, SplitMode, TipMode } from '../types'
 
 export default function SplitBill() {
   const { id } = useParams<{ id: string }>()
@@ -30,11 +30,19 @@ export default function SplitBill() {
   const [openItemId, setOpenItemId] = useState<string | null>(null)
   const [copied, setCopied] = useState(false)
   const [actingAsId, setActingAsId] = useState<string | null>(null)
+  const [groups, setGroups] = useState<FriendGroup[]>([])
+  const [contacts, setContacts] = useState<Contact[]>([])
 
   useEffect(() => {
     if (!client || !id) return
     client.getBill(id).then(setBill)
   }, [client, id])
+
+  useEffect(() => {
+    if (!client) return
+    client.listGroups().then(setGroups)
+    client.listContacts().then(setContacts)
+  }, [client])
 
   useEffect(() => {
     if (!bill || bill.people.length === 0) return
@@ -74,6 +82,17 @@ export default function SplitBill() {
     const person: Person = { id: newId(), name }
     persist({ ...bill, people: [...bill.people, person] })
     setNewPersonName('')
+  }
+
+  /** One tap adds everyone in a saved friend group who isn't already on the bill. */
+  function addGroupMembers(group: FriendGroup) {
+    if (!bill) return
+    const existingNames = new Set(bill.people.map((p) => p.name.toLowerCase()))
+    const toAdd = contacts
+      .filter((c) => group.contactIds.includes(c.id) && !existingNames.has(c.name.toLowerCase()))
+      .map((c): Person => ({ id: newId(), name: c.name }))
+    if (toAdd.length === 0) return
+    persist({ ...bill, people: [...bill.people, ...toAdd] })
   }
 
   function removePerson(personId: string) {
@@ -279,6 +298,19 @@ export default function SplitBill() {
                   &times;
                 </button>
               </Badge>
+            ))}
+          </div>
+        )}
+        {groups.length > 0 && !pairingOpen && (
+          <div className="mt-3 flex flex-wrap gap-2 border-t border-ink-100 pt-3">
+            {groups.map((g) => (
+              <button
+                key={g.id}
+                onClick={() => addGroupMembers(g)}
+                className="rounded-full border border-brand-200 bg-brand-50 px-3 py-1.5 text-xs font-semibold text-brand-700"
+              >
+                + Add {g.name}
+              </button>
             ))}
           </div>
         )}

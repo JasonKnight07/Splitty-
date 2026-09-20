@@ -1,4 +1,4 @@
-import type { AppUser, Bill, SavedReceipt, Subscription } from '../types'
+import type { AppUser, Bill, Contact, FriendGroup, SavedReceipt, Subscription } from '../types'
 
 export interface DataClient {
   readonly mode: 'demo' | 'supabase'
@@ -18,6 +18,14 @@ export interface DataClient {
 
   getSubscription(): Promise<Subscription>
   setSubscription(sub: Subscription): Promise<void>
+
+  listContacts(): Promise<Contact[]>
+  saveContact(contact: Contact): Promise<Contact>
+  deleteContact(id: string): Promise<void>
+
+  listGroups(): Promise<FriendGroup[]>
+  saveGroup(group: FriendGroup): Promise<FriendGroup>
+  deleteGroup(id: string): Promise<void>
 }
 
 /**

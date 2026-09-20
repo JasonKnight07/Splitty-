@@ -7,6 +7,7 @@ import SplitBill from './pages/SplitBill'
 import Receipts from './pages/Receipts'
 import ReceiptDetail from './pages/ReceiptDetail'
 import Settings from './pages/Settings'
+import Contacts from './pages/Contacts'
 
 export default function App() {
   const { loading } = useApp()
@@ -28,6 +29,7 @@ export default function App() {
         <Route path="/receipts" element={<Receipts />} />
         <Route path="/receipts/:id" element={<ReceiptDetail />} />
         <Route path="/settings" element={<Settings />} />
+        <Route path="/contacts" element={<Contacts />} />
       </Routes>
       <BottomNav />
     </div>
