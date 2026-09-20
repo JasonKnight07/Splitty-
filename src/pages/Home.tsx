@@ -15,7 +15,16 @@ export default function Home() {
   const [bills, setBills] = useState<Bill[]>([])
   const [receipts, setReceipts] = useState<SavedReceipt[]>([])
   const [name, setName] = useState('')
+  const [email, setEmail] = useState('')
+  const [linkSentTo, setLinkSentTo] = useState<string | null>(null)
   const [tab, setTab] = useState<Tab>('bills')
+
+  async function handleSignIn() {
+    const isSupabase = client?.mode === 'supabase'
+    const finalEmail = isSupabase ? email.trim() : `${name.trim().toLowerCase().replace(/\s+/g, '.')}@demo.splitty.app`
+    const { awaitingEmail } = await signIn(name.trim(), finalEmail)
+    if (awaitingEmail) setLinkSentTo(finalEmail)
+  }
 
   useEffect(() => {
     if (!client) return
@@ -24,6 +33,29 @@ export default function Home() {
   }, [client])
 
   if (!user) {
+    const isSupabase = client?.mode === 'supabase'
+
+    if (linkSentTo) {
+      return (
+        <Screen>
+          <div className="flex min-h-[70vh] flex-col items-center justify-center text-center">
+            <div className="mb-2 text-5xl">📬</div>
+            <h1 className="text-2xl font-extrabold text-ink-900">Check your email</h1>
+            <p className="mt-2 max-w-xs text-ink-500">
+              We sent a sign-in link to <span className="font-semibold text-ink-700">{linkSentTo}</span>. Open it on
+              this device to finish signing in.
+            </p>
+            <button
+              onClick={() => setLinkSentTo(null)}
+              className="mt-6 text-sm font-semibold text-brand-700 underline"
+            >
+              Use a different email
+            </button>
+          </div>
+        </Screen>
+      )
+    }
+
     return (
       <Screen>
         <div className="flex min-h-[70vh] flex-col items-center justify-center text-center">
@@ -39,14 +71,27 @@ export default function Home() {
               placeholder="Your name"
               className="w-full rounded-full border border-ink-200 bg-white px-4 py-3 text-center outline-none focus:border-brand-500"
             />
+            {isSupabase && (
+              <input
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="Your email"
+                type="email"
+                className="w-full rounded-full border border-ink-200 bg-white px-4 py-3 text-center outline-none focus:border-brand-500"
+              />
+            )}
             <Button
               className="w-full"
-              disabled={!name.trim()}
-              onClick={() => signIn(name.trim(), `${name.trim().toLowerCase().replace(/\s+/g, '.')}@demo.splitty.app`)}
+              disabled={!name.trim() || (isSupabase && !email.trim())}
+              onClick={handleSignIn}
             >
-              Get started
+              {isSupabase ? 'Email me a sign-in link' : 'Get started'}
             </Button>
-            <p className="text-xs text-ink-400">Demo mode &mdash; no password needed. Your data stays on this device.</p>
+            <p className="text-xs text-ink-400">
+              {isSupabase
+                ? 'No password needed — just click the link we email you.'
+                : 'Demo mode — no password needed. Your data stays on this device.'}
+            </p>
           </div>
         </div>
       </Screen>

@@ -33,11 +33,16 @@ export class SupabaseDataClient implements DataClient {
     }
   }
 
-  async signIn(_name: string, email: string): Promise<AppUser> {
-    const { error } = await this.sb.auth.signInWithOtp({ email })
+  async signIn(name: string, email: string): Promise<AppUser> {
+    const { error } = await this.sb.auth.signInWithOtp({
+      email,
+      options: { emailRedirectTo: window.location.origin, data: { name } },
+    })
     if (error) throw error
-    // Magic-link flow: the user completes sign-in via the emailed link.
-    return { id: '', name: _name, email }
+    // Magic-link flow: the caller doesn't treat this as signed-in yet — real
+    // sign-in completes when the emailed link is clicked (see AppContext's
+    // onAuthStateChange listener). This stub is never surfaced to the UI.
+    return { id: '', name, email }
   }
 
   async signOut(): Promise<void> {
