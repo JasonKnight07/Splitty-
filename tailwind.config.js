@@ -29,9 +29,18 @@ export default {
           800: '#3a404b',
           900: '#22262c',
         },
+        paper: {
+          50: '#fdfbf4',
+          100: '#f8f3e4',
+          200: '#efe6cc',
+          300: '#e0d2a8',
+          text: '#3a3527',
+          faint: '#8c8468',
+        },
       },
       fontFamily: {
         sans: ['Inter', 'ui-sans-serif', 'system-ui', 'sans-serif'],
+        mono: ['"JetBrains Mono"', 'ui-monospace', 'SFMono-Regular', 'monospace'],
       },
       boxShadow: {
         card: '0 1px 2px rgba(16,24,32,0.06), 0 1px 8px rgba(16,24,32,0.06)',

@@ -24,3 +24,21 @@ body {
 .tap-highlight-none {
   -webkit-tap-highlight-color: transparent;
 }
+
+/* A scalloped "torn off the main slip" edge — bites page-background-colored
+   half-circles out of the paper so it reads as a perforated tear-off. */
+.slip-torn-top {
+  position: relative;
+}
+.slip-torn-top::before {
+  content: '';
+  position: absolute;
+  top: -1px;
+  left: 0;
+  right: 0;
+  height: 10px;
+  background-image: radial-gradient(circle at 10px 0, #f6f7f8 9px, transparent 9.5px);
+  background-size: 20px 20px;
+  background-repeat: repeat-x;
+  pointer-events: none;
+}

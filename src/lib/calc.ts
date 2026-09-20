@@ -1,4 +1,4 @@
-import type { Bill, Person } from '../types'
+import type { Bill, ItemClaim, Person, ReceiptLineItem } from '../types'
 
 export const TIP_RATES: Record<string, number> = {
   '10': 0.1,
@@ -18,6 +18,27 @@ export function computeGrandTotal(bill: Bill): number {
   return round2(bill.subtotal + bill.tax + computeTip(bill))
 }
 
+export interface UnitRef {
+  item: ReceiptLineItem
+  /** 0-based index within item.quantity — e.g. "Craft Beer x2" has units 0 and 1, each independently claimable */
+  unitIndex: number
+  /** item.price divided across its quantity — the per-unit cost, worked out automatically when the receipt doesn't state one */
+  unitPrice: number
+}
+
+export function unitsForItem(item: ReceiptLineItem): UnitRef[] {
+  const unitPrice = round2(item.price / item.quantity)
+  return Array.from({ length: item.quantity }, (_, unitIndex) => ({ item, unitIndex, unitPrice }))
+}
+
+export function allUnits(bill: Bill): UnitRef[] {
+  return bill.items.flatMap(unitsForItem)
+}
+
+export function claimFor(bill: Bill, itemId: string, unitIndex: number): ItemClaim | undefined {
+  return bill.claims.find((c) => c.itemId === itemId && c.unitIndex === unitIndex)
+}
+
 export interface PersonBreakdown {
   personId: string
   itemsTotal: number
@@ -27,7 +48,7 @@ export interface PersonBreakdown {
 }
 
 /**
- * Splits every item's cost evenly across the people claiming it, then loads
+ * Splits every unit's cost evenly across the people claiming it, then loads
  * each person's item subtotal proportionally with their share of tax + tip
  * (so someone who ordered more pays proportionally more tax/tip too).
  */
@@ -37,12 +58,10 @@ export function computeItemPersonTotals(bill: Bill): Map<string, PersonBreakdown
     totals.set(person.id, { personId: person.id, itemsTotal: 0, taxShare: 0, tipShare: 0, total: 0 })
   }
 
-  const claimByItem = new Map(bill.claims.map((c) => [c.itemId, c.personIds]))
-
-  for (const item of bill.items) {
-    const claimants = claimByItem.get(item.id) ?? []
+  for (const unit of allUnits(bill)) {
+    const claimants = claimFor(bill, unit.item.id, unit.unitIndex)?.personIds ?? []
     if (claimants.length === 0) continue
-    const share = item.price / claimants.length
+    const share = unit.unitPrice / claimants.length
     for (const pid of claimants) {
       const entry = totals.get(pid)
       if (entry) entry.itemsTotal = round2(entry.itemsTotal + share)
@@ -99,9 +118,14 @@ export function computeCoupleTotals(bill: Bill, personTotals: Map<string, Person
   })
 }
 
-export function unclaimedItems(bill: Bill) {
-  const claimed = new Set(bill.claims.filter((c) => c.personIds.length > 0).map((c) => c.itemId))
-  return bill.items.filter((i) => !claimed.has(i.id))
+/** Units nobody has claimed any part of yet — still sitting on the main slip. */
+export function unclaimedUnits(bill: Bill): UnitRef[] {
+  return allUnits(bill).filter((u) => (claimFor(bill, u.item.id, u.unitIndex)?.personIds.length ?? 0) === 0)
+}
+
+/** The units a given person has pulled onto their own slip (solely or shared). */
+export function unitsClaimedBy(bill: Bill, personId: string): UnitRef[] {
+  return allUnits(bill).filter((u) => claimFor(bill, u.item.id, u.unitIndex)?.personIds.includes(personId))
 }
 
 export function round2(n: number): number {

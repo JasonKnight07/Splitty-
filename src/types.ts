@@ -33,7 +33,9 @@ export interface Couple {
 
 export interface ItemClaim {
   itemId: string
-  /** person ids sharing this item; item cost is split evenly across them */
+  /** which unit of the item's quantity this claims (0-based) — lets "Craft Beer x2" be split as two separate beers */
+  unitIndex: number
+  /** person ids sharing this one unit; its price (item.price / item.quantity) is split evenly across them */
   personIds: string[]
 }
 
@@ -86,4 +88,15 @@ export interface AppUser {
   id: string
   name: string
   email: string
+}
+
+export interface Contact {
+  id: string
+  name: string
+}
+
+export interface FriendGroup {
+  id: string
+  name: string
+  contactIds: string[]
 }

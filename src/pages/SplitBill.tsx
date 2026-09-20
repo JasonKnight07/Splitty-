@@ -1,14 +1,19 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { Avatar, Badge, Button, Card, Screen, ScreenHeader } from '../components/ui'
+import { SlipDivider, SlipHeader, SlipRow, SlipTotalRow, TillSlip } from '../components/TillSlip'
 import { TipSelector } from '../components/TipSelector'
 import { useApp } from '../context/AppContext'
 import {
+  claimFor,
   computeCoupleTotals,
   computeGrandTotal,
   computePersonTotals,
   computeTip,
-  unclaimedItems,
+  round2,
+  unclaimedUnits,
+  unitsClaimedBy,
+  unitsForItem,
 } from '../lib/calc'
 import { formatCurrency } from '../lib/currency'
 import { newId } from '../lib/id'
@@ -24,11 +29,18 @@ export default function SplitBill() {
   const [pairingOpen, setPairingOpen] = useState(false)
   const [openItemId, setOpenItemId] = useState<string | null>(null)
   const [copied, setCopied] = useState(false)
+  const [actingAsId, setActingAsId] = useState<string | null>(null)
 
   useEffect(() => {
     if (!client || !id) return
     client.getBill(id).then(setBill)
   }, [client, id])
+
+  useEffect(() => {
+    if (!bill || bill.people.length === 0) return
+    if (actingAsId && bill.people.some((p) => p.id === actingAsId)) return
+    setActingAsId(bill.people.find((p) => p.name === 'You')?.id ?? bill.people[0].id)
+  }, [bill, actingAsId])
 
   function persist(next: Bill) {
     setBill(next)
@@ -41,7 +53,12 @@ export default function SplitBill() {
     () => (bill ? bill.people.filter((p) => !p.coupleId) : []),
     [bill],
   )
-  const missing = useMemo(() => (bill && bill.splitMode === 'items' ? unclaimedItems(bill) : []), [bill])
+  const missing = useMemo(() => (bill && bill.splitMode === 'items' ? unclaimedUnits(bill) : []), [bill])
+  const myUnits = useMemo(
+    () => (bill && actingAsId ? unitsClaimedBy(bill, actingAsId) : []),
+    [bill, actingAsId],
+  )
+  const actingAs = bill?.people.find((p) => p.id === actingAsId)
 
   if (!bill) {
     return (
@@ -117,16 +134,17 @@ export default function SplitBill() {
     persist({ ...bill, customTipAmount: amount })
   }
 
-  function toggleClaim(itemId: string, personId: string) {
+  /** Toggles one person on/off a specific unit — used by the per-unit "share this" panel. */
+  function toggleUnitClaim(itemId: string, unitIndex: number, personId: string) {
     if (!bill) return
-    const existing = bill.claims.find((c) => c.itemId === itemId)
+    const existing = claimFor(bill, itemId, unitIndex)
     let claims
     if (!existing) {
-      claims = [...bill.claims, { itemId, personIds: [personId] }]
+      claims = [...bill.claims, { itemId, unitIndex, personIds: [personId] }]
     } else {
       const has = existing.personIds.includes(personId)
       claims = bill.claims.map((c) =>
-        c.itemId === itemId
+        c.itemId === itemId && c.unitIndex === unitIndex
           ? { ...c, personIds: has ? c.personIds.filter((id) => id !== personId) : [...c.personIds, personId] }
           : c,
       )
@@ -134,9 +152,28 @@ export default function SplitBill() {
     persist({ ...bill, claims })
   }
 
-  function claimantsFor(itemId: string): string[] {
+  /** Tapping an item on the main slip: pull the next free unit onto your own slip. */
+  function grabNextUnit(itemId: string) {
+    if (!bill || !actingAsId) return
+    const item = bill.items.find((i) => i.id === itemId)
+    if (!item) return
+    for (let u = 0; u < item.quantity; u++) {
+      if (!claimFor(bill, itemId, u)?.personIds.length) {
+        toggleUnitClaim(itemId, u, actingAsId)
+        return
+      }
+    }
+  }
+
+  /** Tapping a line on your own slip: send it back to the main slip. */
+  function releaseUnit(itemId: string, unitIndex: number) {
+    if (!actingAsId) return
+    toggleUnitClaim(itemId, unitIndex, actingAsId)
+  }
+
+  function claimantsFor(itemId: string, unitIndex: number): string[] {
     if (!bill) return []
-    return bill.claims.find((c) => c.itemId === itemId)?.personIds ?? []
+    return claimFor(bill, itemId, unitIndex)?.personIds ?? []
   }
 
   async function copySummary() {
@@ -261,58 +298,142 @@ export default function SplitBill() {
 
       {/* Items (item mode only) */}
       {bill.splitMode === 'items' && (
-        <div className="mb-4 space-y-2">
-          {missing.length > 0 && (
-            <div className="rounded-xl bg-amber-50 px-3 py-2 text-xs font-semibold text-amber-800">
-              {missing.length} item{missing.length > 1 ? 's' : ''} not yet assigned to anyone
+        <div className="mb-4 space-y-4">
+          {bill.people.length > 1 && (
+            <div className="flex items-center gap-2 overflow-x-auto pb-1">
+              <span className="shrink-0 text-xs font-semibold text-ink-500">Acting as</span>
+              {bill.people.map((p) => (
+                <button
+                  key={p.id}
+                  onClick={() => setActingAsId(p.id)}
+                  className={`flex shrink-0 items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-semibold transition ${
+                    actingAsId === p.id ? 'border-brand-600 bg-brand-600 text-white' : 'border-ink-200 text-ink-600'
+                  }`}
+                >
+                  <Avatar name={p.name} size="sm" />
+                  {p.name}
+                </button>
+              ))}
             </div>
           )}
-          {bill.items.map((item) => {
-            const claimants = claimantsFor(item.id)
-            const isOpen = openItemId === item.id
-            return (
-              <Card key={item.id} className={claimants.length === 0 ? 'border-amber-300' : ''}>
-                <button
-                  className="flex w-full items-center justify-between text-left"
-                  onClick={() => setOpenItemId(isOpen ? null : item.id)}
-                >
-                  <div>
-                    <p className="font-semibold text-ink-900">{item.name}</p>
-                    <div className="mt-1 flex -space-x-1.5">
-                      {claimants.length === 0 ? (
-                        <span className="text-xs text-amber-700">Tap to assign</span>
-                      ) : (
-                        claimants.map((pid) => {
-                          const person = bill.people.find((p) => p.id === pid)
-                          return person ? <Avatar key={pid} name={person.name} size="sm" /> : null
-                        })
-                      )}
+
+          {/* Your slip — fills up as you pull items off the main bill below */}
+          <TillSlip torn>
+            <SlipHeader
+              merchant={bill.merchant || bill.name}
+              date={bill.date}
+              label={actingAs?.name === 'You' || !actingAs ? "Your slip" : `${actingAs.name}'s slip`}
+            />
+            {myUnits.length === 0 ? (
+              <p className="py-3 text-center text-xs text-paper-faint">
+                Tap items on the bill below to add them to your slip
+              </p>
+            ) : (
+              <>
+                {myUnits.map(({ item, unitIndex, unitPrice }) => {
+                  const claimants = claimantsFor(item.id, unitIndex)
+                  const yourShare = round2(unitPrice / claimants.length)
+                  const others = claimants.filter((pid) => pid !== actingAsId)
+                  return (
+                    <SlipRow
+                      key={`${item.id}-${unitIndex}`}
+                      onClick={() => releaseUnit(item.id, unitIndex)}
+                      left={item.quantity > 1 ? `${item.name} (1)` : item.name}
+                      right={formatCurrency(yourShare)}
+                      subtitle={
+                        others.length > 0
+                          ? `shared with ${others.map((pid) => bill.people.find((p) => p.id === pid)?.name).join(', ')} — tap to remove your share`
+                          : 'tap to send back'
+                      }
+                    />
+                  )
+                })}
+                <SlipDivider />
+                <SlipTotalRow label="Your subtotal" value={formatCurrency(myUnits.reduce((s, { item, unitIndex, unitPrice }) => {
+                  const claimants = claimantsFor(item.id, unitIndex)
+                  return s + unitPrice / claimants.length
+                }, 0))} strong />
+              </>
+            )}
+          </TillSlip>
+
+          {/* The main bill — everyone at the table sees the same slip */}
+          <TillSlip>
+            <SlipHeader merchant={bill.merchant || bill.name} date={bill.date} label="The bill" />
+            {missing.length > 0 && (
+              <p className="mb-2 rounded bg-amber-50 px-2 py-1.5 text-center text-[11px] font-semibold text-amber-800">
+                {missing.length} unit{missing.length > 1 ? 's' : ''} still unclaimed
+              </p>
+            )}
+            {bill.items.map((item) => {
+              const units = unitsForItem(item)
+              const isOpen = openItemId === item.id
+              const claimedUnits = units.filter((u) => claimantsFor(item.id, u.unitIndex).length > 0)
+              const fullyClaimed = claimedUnits.length === units.length
+
+              const owners = Array.from(
+                new Set(claimedUnits.flatMap((u) => claimantsFor(item.id, u.unitIndex)).filter((pid) => pid !== actingAsId)),
+              )
+                .map((pid) => bill.people.find((p) => p.id === pid)?.name)
+                .filter(Boolean)
+
+              let subtitle: string | undefined
+              if (item.quantity > 1) {
+                subtitle = `${formatCurrency(units[0].unitPrice)} each${
+                  claimedUnits.length > 0 ? ` · ${units.length - claimedUnits.length} of ${units.length} left` : ` · ${units.length} left`
+                }`
+              }
+              if (owners.length > 0) {
+                subtitle = `${subtitle ? subtitle + ' · ' : ''}${owners.join(', ')} has ${owners.length === 1 && claimedUnits.length === 1 ? 'this' : 'some'}`
+              }
+
+              return (
+                <div key={item.id}>
+                  <SlipRow
+                    onClick={fullyClaimed ? () => setOpenItemId(isOpen ? null : item.id) : () => grabNextUnit(item.id)}
+                    left={item.name}
+                    right={formatCurrency(item.price)}
+                    subtitle={subtitle}
+                    muted={fullyClaimed}
+                  />
+                  {(item.quantity > 1 || fullyClaimed) && (
+                    <button
+                      onClick={() => setOpenItemId(isOpen ? null : item.id)}
+                      className="-mt-1 mb-1 text-[10px] font-semibold uppercase tracking-wide text-brand-700"
+                    >
+                      {isOpen ? 'Hide' : 'Edit who has this'}
+                    </button>
+                  )}
+                  {isOpen && (
+                    <div className="mb-2 space-y-1.5 rounded border border-dashed border-paper-300 p-2">
+                      {units.map((u) => {
+                        const claimants = claimantsFor(item.id, u.unitIndex)
+                        return (
+                          <div key={u.unitIndex} className="flex flex-wrap items-center gap-1.5">
+                            {item.quantity > 1 && <span className="text-[10px] text-paper-faint">#{u.unitIndex + 1}</span>}
+                            {bill.people.map((p) => {
+                              const active = claimants.includes(p.id)
+                              return (
+                                <button
+                                  key={p.id}
+                                  onClick={() => toggleUnitClaim(item.id, u.unitIndex, p.id)}
+                                  className={`rounded-full border px-2 py-0.5 text-[11px] font-semibold transition ${
+                                    active ? 'border-brand-600 bg-brand-600 text-white' : 'border-paper-300 text-paper-text'
+                                  }`}
+                                >
+                                  {p.name}
+                                </button>
+                              )
+                            })}
+                          </div>
+                        )
+                      })}
                     </div>
-                  </div>
-                  <p className="font-bold text-ink-900">{formatCurrency(item.price)}</p>
-                </button>
-                {isOpen && (
-                  <div className="mt-3 flex flex-wrap gap-2 border-t border-ink-100 pt-3">
-                    {bill.people.map((p) => {
-                      const active = claimants.includes(p.id)
-                      return (
-                        <button
-                          key={p.id}
-                          onClick={() => toggleClaim(item.id, p.id)}
-                          className={`flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-sm font-medium transition ${
-                            active ? 'border-brand-600 bg-brand-600 text-white' : 'border-ink-200 text-ink-600'
-                          }`}
-                        >
-                          <Avatar name={p.name} size="sm" />
-                          {p.name}
-                        </button>
-                      )
-                    })}
-                  </div>
-                )}
-              </Card>
-            )
-          })}
+                  )}
+                </div>
+              )
+            })}
+          </TillSlip>
         </div>
       )}
 
