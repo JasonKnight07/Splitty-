@@ -16,6 +16,31 @@ function toNumber(raw: string): number {
 }
 
 /**
+ * Phone photos carry an EXIF orientation flag rather than being physically
+ * rotated — image viewers respect it, but feeding the raw file straight into
+ * an OCR engine can silently read it sideways. createImageBitmap with
+ * imageOrientation: 'from-image' applies that rotation for us. While we're
+ * drawing to a canvas anyway, also convert to grayscale and boost contrast —
+ * a cheap, well-known win for OCR accuracy on photographed (vs. scanned)
+ * receipts, especially dot-matrix thermal-printer text.
+ */
+async function preprocessForOcr(file: File): Promise<Blob> {
+  const bitmap = await createImageBitmap(file, { imageOrientation: 'from-image' })
+  const canvas = document.createElement('canvas')
+  canvas.width = bitmap.width
+  canvas.height = bitmap.height
+  const ctx = canvas.getContext('2d')
+  if (!ctx) throw new Error('Canvas 2D context unavailable')
+  ctx.filter = 'grayscale(1) contrast(1.35) brightness(1.05)'
+  ctx.drawImage(bitmap, 0, 0)
+  bitmap.close()
+
+  const blob: Blob | null = await new Promise((resolve) => canvas.toBlob(resolve, 'image/png'))
+  if (!blob) throw new Error('Failed to prepare image for OCR')
+  return blob
+}
+
+/**
  * Free, in-browser OCR via Tesseract.js (WebAssembly, no API key, no
  * account). Loaded lazily so its ~2MB worker/wasm/traineddata only download
  * for users who actually reach this fallback. Accuracy is heuristic — it
@@ -24,11 +49,17 @@ function toNumber(raw: string): number {
  * genuine read of the real receipt rather than a canned example.
  */
 export async function localOcrScan(file: File): Promise<ScannedReceipt> {
-  const { createWorker } = await import('tesseract.js')
+  const [{ createWorker, PSM }, preprocessed] = await Promise.all([
+    import('tesseract.js'),
+    preprocessForOcr(file),
+  ])
   const worker = await createWorker('eng')
   let text: string
   try {
-    const result = await worker.recognize(file)
+    // A till slip is one narrow column of text, not a multi-column page —
+    // telling Tesseract to expect a single uniform block noticeably helps.
+    await worker.setParameters({ tessedit_pageseg_mode: PSM.SINGLE_BLOCK })
+    const result = await worker.recognize(preprocessed)
     text = result.data.text
   } finally {
     await worker.terminate()
