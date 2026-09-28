@@ -37,11 +37,23 @@ export function isSupabaseConfigured(): boolean {
   return Boolean(import.meta.env.VITE_SUPABASE_URL && import.meta.env.VITE_SUPABASE_ANON_KEY)
 }
 
+/**
+ * Temporary override: Supabase is fully configured and working (magic-link
+ * sign-in was verified end to end), but email sign-in is paused for now in
+ * favor of a frictionless name-only flow. Flip this back to
+ * `isSupabaseConfigured()` whenever real accounts/email sign-in should
+ * return — no other setup needs to be redone, the Supabase project and its
+ * env vars are untouched.
+ */
+function shouldUseSupabase(): boolean {
+  return false
+}
+
 let singleton: DataClient | null = null
 
 export async function getDataClient(): Promise<DataClient> {
   if (singleton) return singleton
-  if (isSupabaseConfigured()) {
+  if (shouldUseSupabase()) {
     const { SupabaseDataClient } = await import('./supabaseClient')
     singleton = new SupabaseDataClient()
   } else {

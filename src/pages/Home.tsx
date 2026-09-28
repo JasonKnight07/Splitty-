@@ -14,15 +14,18 @@ export default function Home() {
   const navigate = useNavigate()
   const [bills, setBills] = useState<Bill[]>([])
   const [receipts, setReceipts] = useState<SavedReceipt[]>([])
-  const [name, setName] = useState('')
+  const [firstName, setFirstName] = useState('')
+  const [surname, setSurname] = useState('')
   const [email, setEmail] = useState('')
   const [linkSentTo, setLinkSentTo] = useState<string | null>(null)
   const [tab, setTab] = useState<Tab>('bills')
 
+  const fullName = `${firstName.trim()} ${surname.trim()}`.trim()
+
   async function handleSignIn() {
     const isSupabase = client?.mode === 'supabase'
-    const finalEmail = isSupabase ? email.trim() : `${name.trim().toLowerCase().replace(/\s+/g, '.')}@demo.splitty.app`
-    const { awaitingEmail } = await signIn(name.trim(), finalEmail)
+    const finalEmail = isSupabase ? email.trim() : `${fullName.toLowerCase().replace(/\s+/g, '.')}@demo.splitty.app`
+    const { awaitingEmail } = await signIn(fullName, finalEmail)
     if (awaitingEmail) setLinkSentTo(finalEmail)
   }
 
@@ -65,12 +68,20 @@ export default function Home() {
             Scan the slip, split the bill, keep the receipts.
           </p>
           <div className="mt-8 w-full max-w-xs space-y-3">
-            <input
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder="Your name"
-              className="w-full rounded-full border border-ink-200 bg-white px-4 py-3 text-center outline-none focus:border-brand-500"
-            />
+            <div className="flex gap-2">
+              <input
+                value={firstName}
+                onChange={(e) => setFirstName(e.target.value)}
+                placeholder="First name"
+                className="w-full min-w-0 rounded-full border border-ink-200 bg-white px-4 py-3 text-center outline-none focus:border-brand-500"
+              />
+              <input
+                value={surname}
+                onChange={(e) => setSurname(e.target.value)}
+                placeholder="Surname"
+                className="w-full min-w-0 rounded-full border border-ink-200 bg-white px-4 py-3 text-center outline-none focus:border-brand-500"
+              />
+            </div>
             {isSupabase && (
               <input
                 value={email}
@@ -82,7 +93,7 @@ export default function Home() {
             )}
             <Button
               className="w-full"
-              disabled={!name.trim() || (isSupabase && !email.trim())}
+              disabled={!firstName.trim() || !surname.trim() || (isSupabase && !email.trim())}
               onClick={handleSignIn}
             >
               {isSupabase ? 'Email me a sign-in link' : 'Get started'}
